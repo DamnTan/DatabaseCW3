@@ -1,6 +1,7 @@
 package uk.ac.bris.cs.databases.cwk3;
 
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import uk.ac.bris.cs.databases.api.APIProvider;
@@ -65,7 +66,14 @@ public class API implements APIProvider {
 
     @Override
     public Result<List<ForumSummaryView>> getForums() {
-        throw new UnsupportedOperationException("Not supported yet.");
+
+        ForumSummaryView f = new ForumSummaryView(100, "this is a text", null);
+        List<ForumSummaryView> list = new ArrayList<>();
+        list.add(f);
+
+        return Result.success(list);
+
+        // throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
