@@ -1,9 +1,13 @@
 package uk.ac.bris.cs.databases.cwk3;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import uk.ac.bris.cs.databases.api.APIProvider;
 import uk.ac.bris.cs.databases.api.AdvancedForumSummaryView;
 import uk.ac.bris.cs.databases.api.AdvancedForumView;
@@ -31,7 +35,26 @@ public class API implements APIProvider {
 
     @Override
     public Result<Map<String, String>> getUsers() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        Map<String, String> userMap = new HashMap<String, String>();
+        try(PreparedStatement p = c.prepareStatement("SELECT username, name FROM Person")){
+            ResultSet r = p.executeQuery();
+            boolean k;
+            k = r.next();
+            if(!k){
+                return Result.failure("Table is empty");
+            }
+            while(k){
+                String username = new String();
+                String name = new String();
+                username = r.getString("username");
+                name = r.getString("name");
+                userMap.put(username, name);
+                k = r.next();
+            }
+        } catch (SQLException e){
+            return Result.fatal("Something bad happened: " + e);
+        }
+        return Result.success(userMap);
     }
 
     @Override
@@ -135,6 +158,5 @@ public class API implements APIProvider {
     public Result likePost(String username, long topicId, int post, boolean like) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    
    }
 

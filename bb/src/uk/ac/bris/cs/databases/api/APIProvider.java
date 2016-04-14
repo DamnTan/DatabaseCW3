@@ -1,7 +1,6 @@
 package uk.ac.bris.cs.databases.api;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * This is the main interface that you have to implement.
@@ -18,7 +17,7 @@ public interface APIProvider {
      * @return A map with one entry per user of the form username -> name
      * (note that usernames are unique).
      */
-    public Result<Map<String, String>> getUsers();
+    public Result getUsers();
     /*select users from [table]*/
     /**
      * Get a PersonView for the person with the given username.
