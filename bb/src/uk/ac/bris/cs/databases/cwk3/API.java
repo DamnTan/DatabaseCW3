@@ -90,7 +90,7 @@ public class API implements APIProvider {
       catch (SQLException e){
           return Result.fatal("Something bad happened: " + e);
       }
-      return Result.success(userMap);
+      return count;
     }
 
     @Override
