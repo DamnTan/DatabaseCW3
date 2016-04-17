@@ -41,17 +41,18 @@ public class API implements APIProvider {
             boolean k;
             k = r.next();
             if(!k){
-                return Result.failure("Table is empty");
+               return Result.failure("Table is empty");
             }
             while(k){
-                String username = new String();
-                String name = new String();
-                username = r.getString("username");
-                name = r.getString("name");
-                userMap.put(username, name);
-                k = r.next();
+               String username = new String();
+               String name = new String();
+               username = r.getString("username");
+               name = r.getString("name");
+               userMap.put(username, name);
+               k = r.next();
             }
-        } catch (SQLException e){
+        }
+        catch (SQLException e){
             return Result.fatal("Something bad happened: " + e);
         }
         return Result.success(userMap);
@@ -76,7 +77,7 @@ public class API implements APIProvider {
          ResultSet r = p.executeQuery();
          boolean k;
          k = r.next();
-         if(!k){
+         if( !k ) {
            return Result.failure("Table is empty");
          }
          else {
@@ -109,13 +110,10 @@ public class API implements APIProvider {
 
     @Override
     public Result<List<ForumSummaryView>> getForums() {
-
         ForumSummaryView f = new ForumSummaryView(100, "this is a text", null);
         List<ForumSummaryView> list = new ArrayList<>();
         list.add(f);
-
         return Result.success(list);
-
         // throw new UnsupportedOperationException("Not supported yet.");
     }
 
