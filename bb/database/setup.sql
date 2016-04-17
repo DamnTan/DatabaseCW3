@@ -21,17 +21,16 @@ CREATE TABLE Forum (
 CREATE TABLE Topic (
     topicID INTEGER PRIMARY KEY,
     title VARCHAR(100) NOT NULL,
-    Forum INTEGER NOT NULL,
-    creatorID INTEGER,
+    forum INTEGER NOT NULL,
+    creatorID INTEGER NOT NULL,
     page INTEGER,
     CONSTRAINT Creator_ID FOREIGN KEY (creatorID) REFERENCES Person(id),
     CONSTRAINT Forum_ID FOREIGN KEY (Forum)REFERENCES Forum(ID)
 );
 
 CREATE TABLE Post (
-    Postnumber INTEGER PRIMARY KEY,
-    text VARCHAR(200) NOT NULL,
-    posted INTEGER NOT NULL,
+    postNumber INTEGER PRIMARY KEY,
+    contents VARCHAR(200) NOT NULL,
     author INTEGER,
     topic INTEGER NOT NULL,
     postedAt INTEGER NOT NULL,
@@ -58,7 +57,7 @@ CREATE TABLE Liketopic (
     PRIMARY KEY (userID, Topic_ID)
 );
 
-CREATE TABLE favourite (
+CREATE TABLE Favourite (
     userID INTEGER,
     Topic INTEGER,
     PRIMARY KEY (userID, Topic)

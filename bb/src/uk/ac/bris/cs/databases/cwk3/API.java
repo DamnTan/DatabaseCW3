@@ -69,7 +69,28 @@ public class API implements APIProvider {
 
     @Override
     public Result<Integer> countPostsInTopic(long topicId) {
-        throw new UnsupportedOperationException("Not supported yet.");
+      int count;
+      String s = "SELECT count(*) AS counter FROM Topic JOIN
+      Post on topicID = postNumber WHERE topicID = ?";
+      try(PreparedStatement p = c.prepareStatement(s)){
+         s.setString(1, topicID);
+         ResultSet r = p.executeQuery();
+         boolean k;
+         k = r.next();
+         if(!k){
+           return Result.failure("Table is empty");
+         }
+         else {
+           count = r.getString("counter");
+         }
+         if (r.next() !=null) {
+            throw new RuntimeException("There shouldn't be another row!");
+         }
+      }
+      catch (SQLException e){
+          return Result.fatal("Something bad happened: " + e);
+      }
+      return Result.success(userMap);
     }
 
     @Override
