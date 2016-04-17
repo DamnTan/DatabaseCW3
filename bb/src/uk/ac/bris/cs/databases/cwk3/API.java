@@ -28,7 +28,7 @@ import uk.ac.bris.cs.databases.api.TopicView;
 public class API implements APIProvider {
 
     private final Connection c;
-    
+
     public API(Connection c) {
         this.c = c;
     }
@@ -159,4 +159,3 @@ public class API implements APIProvider {
         throw new UnsupportedOperationException("Not supported yet.");
     }
    }
-
