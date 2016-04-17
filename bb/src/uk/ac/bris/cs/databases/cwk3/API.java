@@ -70,10 +70,9 @@ public class API implements APIProvider {
     @Override
     public Result<Integer> countPostsInTopic(long topicId) {
       int count;
-      String s = "SELECT count(*) AS counter FROM Topic JOIN
-      Post on topicID = postNumber WHERE topicID = ?";
+      String s = "SELECT count(*) AS counter FROM Topic JOIN Post on topicID = postNumber WHERE topicID = ?";
       try(PreparedStatement p = c.prepareStatement(s)){
-         s.setString(1, topicID);
+         p.setLong(1, topicId);
          ResultSet r = p.executeQuery();
          boolean k;
          k = r.next();
@@ -81,16 +80,16 @@ public class API implements APIProvider {
            return Result.failure("Table is empty");
          }
          else {
-           count = r.getString("counter");
+           count = r.getInt("counter");
          }
-         if (r.next() !=null) {
+         if (r.next()) {
             throw new RuntimeException("There shouldn't be another row!");
          }
       }
       catch (SQLException e){
           return Result.fatal("Something bad happened: " + e);
       }
-      return count;
+      return Result.success(count);
     }
 
     @Override
