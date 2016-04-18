@@ -38,8 +38,7 @@ public class API implements APIProvider {
         Map<String, String> userMap = new HashMap<String, String>();
         try(PreparedStatement p = c.prepareStatement("SELECT username, name FROM Person")){
             ResultSet r = p.executeQuery();
-            boolean k;
-            k = r.next();
+            boolean k = r.next();
             if(!k){
                return Result.failure("Table is empty");
             }
@@ -60,7 +59,29 @@ public class API implements APIProvider {
 
     @Override
     public Result<PersonView> getPersonView(String username) {
-        throw new UnsupportedOperationException("Not supported yet.");
+      if(username == ""){
+        return Result.failure("Username blank");
+      }
+      PersonView pv;
+      try(PreparedStatement p = c.prepareStatement("SELECT * FROM Person WHERE username = ?")){
+          p.setString(1, username);
+          ResultSet r = p.executeQuery();
+          boolean k = r.next();
+          if(!k){
+            return Result.failure("User doesn't exist");
+          }
+          String name = new String();
+          String studentId = new String();
+          name = r.getString("name");
+          username = r.getString("username")
+          studentId = r.getString("stuId");
+          pv = new PersonView(name, username, studentId);
+          }
+      }
+      catch (SQLException e){
+          return Result.fatal("Something bad happened: " + e);
+      }
+      return Result.success(pv);
     }
 
     @Override
@@ -71,7 +92,7 @@ public class API implements APIProvider {
     @Override
     public Result<Integer> countPostsInTopic(long topicId) {
       int count;
-      String s = "SELECT count(*) AS counter FROM Topic JOIN Post on topicID = postNumber WHERE topicID = ?";
+      String s = "SELECT count(*) AS counter FROM Topic JOIN Post on topicID = topic WHERE topicID = ?";
       try(PreparedStatement p = c.prepareStatement(s)){
          p.setLong(1, topicId);
          ResultSet r = p.executeQuery();
