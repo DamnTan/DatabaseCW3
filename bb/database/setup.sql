@@ -24,18 +24,20 @@ CREATE TABLE Topic (
     forum INTEGER NOT NULL,
     creatorID INTEGER NOT NULL,
     page INTEGER,
+    created INTEGER NOT NULL,
     CONSTRAINT Creator_ID FOREIGN KEY (creatorID) REFERENCES Person(id),
     CONSTRAINT Forum_ID FOREIGN KEY (Forum)REFERENCES Forum(ID)
 );
 
 CREATE TABLE Post (
-    postNumber INTEGER PRIMARY KEY,
+    postNumber INTEGER NOT NULL,
     contents VARCHAR(200) NOT NULL,
     author INTEGER,
     topic INTEGER NOT NULL,
     postedAt INTEGER NOT NULL,
     CONSTRAINT author_id FOREIGN KEY (author) REFERENCES Person(id),
     CONSTRAINT topic_id FOREIGN KEY (topic) REFERENCES Topic(topicID)
+    PRIMARY KEY (postNumber, topic)
 );
 
 CREATE TABLE Likepost (
