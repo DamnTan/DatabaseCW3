@@ -85,7 +85,7 @@ public class Server2 extends RouterNanoHTTPD {
         // server //
 
         APIProvider api = c.getApi();
-        //api.getLatestPost(); // FILL THIS LATER
+        api.getLatestPost(0);
 
         //Server2 server = new Server2();
         //ServerRunner.run(Server2.class);

@@ -99,6 +99,7 @@ public class API implements APIProvider {
           forum = new SimpleForumSummaryView(id, title);
           sfsvlist.add(forum);
         }
+          System.out.println(title);
       }
       catch (SQLException e) {
         return Result.fatal("Something bad happened" + e);
@@ -191,39 +192,51 @@ public class API implements APIProvider {
 
     @Override
     public Result<PostView> getLatestPost(long topicId) {
-        String s = "SELECT *, (SELECT COUNT(*) FROM Topic LEFT JOIN Likepost ON topicid = topic_id AS Likes) FROM Topic LEFT JOIN Post ON topic.topicid = post.topic JOIN Forum ON forum.id = topic.forum JOIN Person ON person.id = post.author JOIN Likepost ON (Post.postnumber = Likepost.Post_ID AND topic.topicid = likepost.topic_id) WHERE topic.topicid = ? ORDER BY postedAt DESC LIMIT 1";
+        String s = "SELECT *, (SELECT COUNT(*) FROM Topic LEFT JOIN Likepost ON topicid = topic_id where topicid = ?) AS Likes FROM Topic LEFT JOIN Post ON topic.topicid = post.topic JOIN Forum ON forum.id = topic.forum JOIN Person ON person.id = post.author left join likepost on (userid=Person.id) and (topic_id=topicid) WHERE topic.topicid = ? ORDER BY postedAt DESC LIMIT 1";
         PostView pv;
         try (PreparedStatement p = c.prepareStatement(s)) {
-          p.setLong(1, topicId);
-          ResultSet r = p.executeQuery();
-          if (r == null) {
-            Result.failure("No results found");
-            System.out.println("Whatever!");
-          }// THis might be wrong!
-          System.out.println("Whatever!");
-          Long fid = r.getLong("Forum.id");
-          Long tid = r.getLong("topicID");
-          int pnum = r.getInt("postNumber");
-          String aname = r.getString("Person.name");
-          String auname = r.getString("Person.username");
-          String txt = r.getString("post.contents");
-          int date = r.getInt("postedAt");
-          int likes = r.getInt("Likes");
-          pv = new PostView(fid, tid, pnum, aname, auname, txt, date, likes);
+            p.setLong(1, topicId);
+            p.setLong(2, topicId);
+            ResultSet r = p.executeQuery();
+            boolean exists;
+            exists = r.next();
+            if(!exists) {
+                return Result.failure("No results found");
+            }
+            Long fid = r.getLong("id");
+            Long tid = r.getLong("topicID");
+            int pnum = r.getInt("postNumber");
+            String aname = r.getString("name");
+            String auname = r.getString("username");
+            String txt = r.getString("contents");
+            int date = r.getInt("postedAt");
+            int likes = r.getInt("Likes");
+            pv = new PostView(fid, tid, pnum, aname, auname, txt, date, likes);
         }
         catch (SQLException e) {
-          return Result.failure("Something bad happened: " + e);
+            return Result.failure("Something bad happened: " + e);
         }
         return Result.success(pv);
     }
 
     @Override
     public Result<List<ForumSummaryView>> getForums() {
-        ForumSummaryView f = new ForumSummaryView(100, "this is a test", null);
-        List<ForumSummaryView> list = new ArrayList<>();
-        list.add(f);
+        String s = "SELECT * FROM Forum ORDER BY title ASC";
+        List<ForumSummaryView> list = new ArrayList<ForumSummaryView>();
+        try(PreparedStatement p = c.prepareStatement(s)){
+            ResultSet r = p.executeQuery();
+            Long id;
+            String title;
+            while(r.next()){
+                id = r.getLong("id");
+                title = r.getString("title");
+                ForumSummaryView f = new ForumSummaryView(id, title, null);
+                list.add(f);
+            }
+        } catch (SQLException e){
+            return Result.failure("Something bad happened: " + e);
+        }
         return Result.success(list);
-        // throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
