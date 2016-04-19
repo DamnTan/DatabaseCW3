@@ -1,8 +1,8 @@
 DROP TABLE IF EXISTS Person;
 DROP TABLE IF EXISTS Forum;
 DROP TABLE IF EXISTS Topic;
-DROP TABLE IF EXISTS Posts;
-DROP TABLE IF EXISTS Likeposts;
+DROP TABLE IF EXISTS Post;
+DROP TABLE IF EXISTS Likepost;
 DROP TABLE IF EXISTS liketopic;
 DROP TABLE IF EXISTS Favourite;
 
@@ -21,17 +21,16 @@ CREATE TABLE Forum (
 CREATE TABLE Topic (
     topicID INTEGER PRIMARY KEY,
     title VARCHAR(100) NOT NULL,
-    Forum INTEGER NOT NULL,
-    creatorID INTEGER,
+    forum INTEGER NOT NULL,
+    creatorID INTEGER NOT NULL,
     page INTEGER,
     CONSTRAINT Creator_ID FOREIGN KEY (creatorID) REFERENCES Person(id),
     CONSTRAINT Forum_ID FOREIGN KEY (Forum)REFERENCES Forum(ID)
 );
 
-CREATE TABLE Posts (
-    Postnumber INTEGER PRIMARY KEY,
-    text VARCHAR(200) NOT NULL,
-    posted INTEGER NOT NULL,
+CREATE TABLE Post (
+    postNumber INTEGER PRIMARY KEY,
+    contents VARCHAR(200) NOT NULL,
     author INTEGER,
     topic INTEGER NOT NULL,
     postedAt INTEGER NOT NULL,
@@ -39,7 +38,7 @@ CREATE TABLE Posts (
     CONSTRAINT topic_id FOREIGN KEY (topic) REFERENCES Topic(topicID)
 );
 
-CREATE TABLE Likeposts (
+CREATE TABLE Likepost (
     userID INTEGER,
     Post_ID INTEGER,
     Topic_ID INTEGER,
@@ -58,7 +57,7 @@ CREATE TABLE Liketopic (
     PRIMARY KEY (userID, Topic_ID)
 );
 
-CREATE TABLE favourite (
+CREATE TABLE Favourite (
     userID INTEGER,
     Topic INTEGER,
     PRIMARY KEY (userID, Topic)
