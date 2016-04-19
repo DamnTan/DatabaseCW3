@@ -134,8 +134,28 @@ public class API implements APIProvider {
 
     @Override
     public Result<List<PersonView>> getLikers(long topicId) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
+      List<PersonView> list_of_people = new ArrayList<PersonView>();
+      String s = "SELECT *  FROM Person JOIN Post on topicID = topic WHERE topicID = ?";
+      try(PreparedStatement p = c.prepareStatement(s)) {
+         PersonView person;
+         p.setLong(1, topicId);
+         ResultSet r = p.executeQuery();
+         boolean k;
+         String username = new String();
+         String name = new String();
+         String studentId = new String();
+         while(r.next()){
+            username = r.getString("username");
+            name = r.getString("name");
+            studentId = r.getString("stuId");
+            person = new PersonView(name, username, studentId);
+            list_of_people.add(person);
+         }
+      }
+      catch (SQLException e){
+          return Result.fatal("Something bad happened: " + e);
+      }
+      return Result.success(list_of_people);    }
 
     @Override
     public Result<SimpleTopicView> getSimpleTopic(long topicId) {
