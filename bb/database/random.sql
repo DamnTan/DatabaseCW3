@@ -5,6 +5,6 @@ insert into forum values (0, "computers science");
 insert into topic values (0,"databases",0, 1, 1 );
 insert into topic values (1,"java",0, 1, 1 );
 insert into topic values (1,"research skills",0, 1, 0 );
-insert into post values (0,"java asssingment, requirments",0, 1, 07042016 );
-insert into post values (1,"java asssingment, GUI javafx or swing",2, 1, 27032016 );
+insert into post values (0,"java assassingment, requirments",0, 1, 07042016 );
+insert into post values (1,"java assassingment, GUI javafx or swing",2, 1, 27032016 );
 insert into post values (2,"database asssingment, schema",1, 0, 18042016 );
