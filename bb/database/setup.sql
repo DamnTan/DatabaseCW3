@@ -25,8 +25,8 @@ CREATE TABLE Topic (
     creatorID INTEGER NOT NULL,
     page INTEGER,
     created INTEGER NOT NULL,
-    CONSTRAINT Creator_ID FOREIGN KEY (creatorID) REFERENCES Person(id),
-    CONSTRAINT Forum_ID FOREIGN KEY (Forum)REFERENCES Forum(ID)
+    CONSTRAINT creator_ID FOREIGN KEY (creatorID) REFERENCES Person(id),
+    CONSTRAINT forum_ID FOREIGN KEY (Forum)REFERENCES Forum(ID)
 );
 
 CREATE TABLE Post (
