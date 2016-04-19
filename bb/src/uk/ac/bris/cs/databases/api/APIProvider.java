@@ -18,7 +18,6 @@ public interface APIProvider {
      * (note that usernames are unique).
      */
     public Result getUsers();
-    /*select users from [table]*/
     /**
      * Get a PersonView for the person with the given username.
      * @param username - the username to search for, cannot be empty.
@@ -26,14 +25,13 @@ public interface APIProvider {
      * PersonView. Otherwise, failure (or fatal on a database error).
      */
     public Result<PersonView> getPersonView(String username);
-    /*join all tables and then return all entries from one person*/
     /**
      * Get the "main page" containing a list of forums ordered alphabetically
      * by title. Simple version that does not return any topic information.
      * @return the list of all forums; an empty list if there are no forums.
      */
+
     public Result<List<SimpleForumSummaryView>> getSimpleForums();
-    /*select count(*) from */
     /**
      * Count the number of posts in a topic (without fetching them all).
      * @param topicId - the topic to look at.
