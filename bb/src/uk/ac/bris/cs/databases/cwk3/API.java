@@ -20,7 +20,7 @@ import uk.ac.bris.cs.databases.api.PersonView;
 import uk.ac.bris.cs.databases.api.SimpleForumSummaryView;
 import uk.ac.bris.cs.databases.api.SimpleTopicView;
 import uk.ac.bris.cs.databases.api.TopicView;
-
+import uk.ac.bris.cs.databases.api.SimplePostView;
 /**
  *
  * @author csxdb
@@ -145,6 +145,7 @@ public class API implements APIProvider {
          String name = new String();
          String studentId = new String();
          while(r.next()){
+
             username = r.getString("username");
             name = r.getString("name");
             studentId = r.getString("stuId");
@@ -160,7 +161,32 @@ public class API implements APIProvider {
 
     @Override
     public Result<SimpleTopicView> getSimpleTopic(long topicId) {
-        throw new UnsupportedOperationException("Not supported yet.");
+      SimplePostView post;
+      List <SimplePostView> posts = new ArrayList<SimplePostView>();
+      SimpleTopicView topic;
+      String s = "SELECT *FROM Topic LEFT JOIN Post  ON topic.topicid = post.topic  WHERE topicID = ?";
+      try (PreparedStatement p = c.prepareStatement(s)) {
+        p.setLong(1, topicId);
+        ResultSet r = p.executeQuery();
+        if (r == null) {
+          Result.failure("No topic found");
+        }
+        topicId = r.getLong("topicid");
+        String title = r.getString("title");
+        while(r.next()){
+          int postNumber = r.getInt("postNumber");
+          String author = r.getString("author");
+          String text = r.getString("contents");
+          int postedAt = r.getInt("postedAt");
+          post = new SimplePostView(postNumber, author, text, postedAt);
+          posts.add(post);
+        }
+        topic = new SimpleTopicView(topicId, title, posts);
+      }
+      catch (SQLException e) {
+        return Result.failure("Something bad happened");
+      }
+      return Result.success(topic);
     }
 
     @Override
@@ -170,10 +196,10 @@ public class API implements APIProvider {
         try (PreparedStatement p = c.prepareStatement(s)) {
           p.setLong(1, topicId);
           ResultSet r = p.executeQuery();
-          /*if (r == null) {
+          if (r == null) {
             Result.failure("No results found");
             System.out.println("Whatever!");
-          }*/
+          }// THis might be wrong!
           System.out.println("Whatever!");
           Long fid = r.getLong("Forum.id");
           Long tid = r.getLong("topicID");
@@ -184,9 +210,7 @@ public class API implements APIProvider {
           int date = r.getInt("postedAt");
           int likes = r.getInt("Likes");
           pv = new PostView(fid, tid, pnum, aname, auname, txt, date, likes);
-
         }
-
         catch (SQLException e) {
           return Result.failure("Something bad happened: " + e);
         }
@@ -195,7 +219,7 @@ public class API implements APIProvider {
 
     @Override
     public Result<List<ForumSummaryView>> getForums() {
-        ForumSummaryView f = new ForumSummaryView(100, "this is a text", null);
+        ForumSummaryView f = new ForumSummaryView(100, "this is a test", null);
         List<ForumSummaryView> list = new ArrayList<>();
         list.add(f);
         return Result.success(list);
