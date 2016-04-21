@@ -22,8 +22,7 @@ CREATE TABLE Topic (
     topicID INTEGER PRIMARY KEY,
     title VARCHAR(100) NOT NULL,
     forum INTEGER NOT NULL,
-    creatorID INTEGER NOT NULL,
-    page INTEGER,
+    creatorID VARCHAR(10) NOT NULL,
     created INTEGER NOT NULL,
     CONSTRAINT creator_ID FOREIGN KEY (creatorID) REFERENCES Person(username),
     CONSTRAINT forum_ID FOREIGN KEY (Forum)REFERENCES Forum(ID)

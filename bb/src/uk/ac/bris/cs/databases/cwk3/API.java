@@ -44,17 +44,17 @@ public class API implements APIProvider {
         Map<String, String> userMap = new HashMap<String, String>();
         try(PreparedStatement p = c.prepareStatement("SELECT username, name FROM Person")){
             ResultSet r = p.executeQuery();
-            boolean k = r.next();
-            if(!k){
+            boolean exists = r.next();
+            if(!exists){
                return Result.failure("Table is empty");
             }
-            while(k){
+            while(exists){
                String username = new String();
                String name = new String();
                username = r.getString("username");
                name = r.getString("name");
                userMap.put(username, name);
-               k = r.next();
+               exists = r.next();
             }
         }
         catch (SQLException e){
@@ -65,19 +65,19 @@ public class API implements APIProvider {
 
     @Override
     public Result<PersonView> getPersonView(String username) {
-      if(username == ""){
+      if(username == null || username.equals("")){
         return Result.failure("Username blank");
+      }
+      if (!checkString("Person", "username", username)) {
+         return Result.failure("User does not exist");
       }
       PersonView pv;
       try(PreparedStatement p = c.prepareStatement("SELECT * FROM Person WHERE username = ?")){
           p.setString(1, username);
           ResultSet r = p.executeQuery();
-          boolean k = r.next();
-          if(!k){
-            return Result.failure("User doesn't exist");
-          }
           String name = new String();
           String studentId = new String();
+          r.next();
           name = r.getString("name");
           username = r.getString("username");
           studentId = r.getString("stuId");
@@ -115,19 +115,17 @@ public class API implements APIProvider {
 
     @Override
     public Result<Integer> countPostsInTopic(long topicId) {
+      if(!checkLong("Topic", "topicID", topicId)) {
+         return Result.failure("Topic does not exist");
+      }
       int count;
       String s = "SELECT count(*) AS counter FROM Topic JOIN Post on topicID = topic WHERE topicID = ?";
       try(PreparedStatement p = c.prepareStatement(s)){
          p.setLong(1, topicId);
          ResultSet r = p.executeQuery();
          boolean k;
-         k = r.next();
-         if( !k ) {
-           return Result.failure("Table is empty");
-         }
-         else {
-           count = r.getInt("counter");
-         }
+         r.next();
+         count = r.getInt("counter");
          if (r.next()) {
             throw new RuntimeException("There shouldn't be another row!");
          }
@@ -140,6 +138,9 @@ public class API implements APIProvider {
 
     @Override
     public Result<List<PersonView>> getLikers(long topicId) {
+      if (!checkLong("topic", "topicId", topicId)) {
+         return Result.failure("Topic does not exist");
+      }
       List<PersonView> list_of_people = new ArrayList<PersonView>();
       String s = "SELECT * FROM Person JOIN likeTopic on id = userID WHERE topicID = ?";
       try(PreparedStatement p = c.prepareStatement(s)) {
@@ -166,16 +167,15 @@ public class API implements APIProvider {
 
     @Override
     public Result<SimpleTopicView> getSimpleTopic(long topicId) {
-      SimplePostView post;
+      if(!checkLong("Topic", "topicID", topicId)) {
+         return Result.failure("Topic does not exist");
+      }SimplePostView post;
       List <SimplePostView> posts = new ArrayList<SimplePostView>();
       SimpleTopicView topic;
       String s = "SELECT *FROM Topic LEFT JOIN Post  ON topic.topicid = post.topic  WHERE topicID = ?";
       try (PreparedStatement p = c.prepareStatement(s)) {
         p.setLong(1, topicId);
         ResultSet r = p.executeQuery();
-        if (r == null) {
-          Result.failure("No topic found");
-        }
         topicId = r.getLong("topicid");
         String title = r.getString("title");
         while(r.next()){
@@ -196,6 +196,9 @@ public class API implements APIProvider {
 
     @Override
     public Result<PostView> getLatestPost(long topicId) {
+      if(!checkLong("Topic", "topicID", topicId)) {
+         return Result.failure("Topic does not exist");
+      }
         String s = "SELECT *, (SELECT COUNT(*) FROM Topic LEFT JOIN Likepost ON topicid = topic_id where topicid = ?) AS Likes FROM Topic LEFT JOIN Post ON topic.topicid = post.topic JOIN Forum ON forum.id = topic.forum JOIN Person ON person.username = post.author left join likepost on (userid=Person.username) and (topic_id=topicid) WHERE topic.topicid = ? ORDER BY postedAt DESC LIMIT 1";
         PostView pv;
         try (PreparedStatement p = c.prepareStatement(s)) {
@@ -204,9 +207,6 @@ public class API implements APIProvider {
             ResultSet r = p.executeQuery();
             boolean exists;
             exists = r.next();
-            if(!exists) {
-                return Result.failure("No results found");
-            }
             Long fid = r.getLong("id");
             Long tid = r.getLong("topicID");
             int pnum = r.getInt("postNumber");
@@ -258,6 +258,12 @@ public class API implements APIProvider {
 
     @Override
     public Result createPost(long topicId, String username, String text) {
+      if (username == null || username.equals("") || text == null || text.equals("")) {
+        return Result.failure("Not correct input");
+      }
+      if(!checkString("person", "username", username)) {
+        return Result.failure("User does not exist");
+      }
       Result<PostView> previous = getLatestPost(topicId);
       PostView post;
       try  {
@@ -284,6 +290,9 @@ public class API implements APIProvider {
 
     @Override
     public Result addNewPerson(String name, String username, String studentId) {
+      if (username == null || username.equals("") || name == null || name.equals("")) {
+        return Result.failure("bad username");
+      }
       String s = "Insert into Person (name, username, stuId) VALUES(?, ?, ?)";
       try(PreparedStatement p = c.prepareStatement(s)){
           p.setString(1, name);
@@ -299,6 +308,9 @@ public class API implements APIProvider {
 
     @Override
     public Result<ForumView> getForum(long id) {
+      if (!checkLong("Forum", "id", id)) {
+        return Result.failure("Forum does not exist");
+      }
       String s = "SELECT Forum.title as forumt, Topic.title as topict,* FROM Forum LEFT JOIN Topic on forum = Forum.id JOIN Person on creatorID = username where forum.id =?";
       ForumView forum;
       try(PreparedStatement p = c.prepareStatement(s)){
@@ -309,12 +321,10 @@ public class API implements APIProvider {
           List<SimpleTopicSummaryView> topics = new ArrayList<SimpleTopicSummaryView>();
           exists = r.next();
           if(!exists) {
-             return Result.failure("No results found");
+             return Result.failure("No topics found");
           }
           id = r.getLong("id");
           String forumtitle = r.getString("forumt");
-          String creatorUsername = r.getString("username");
-          String creatorName = r.getString("name");
           while(exists){
              Long topicID = r.getLong("topicID");
              String topictitle = r.getString("topict");
@@ -365,12 +375,94 @@ public class API implements APIProvider {
 
     @Override
     public Result<TopicView> getTopic(long topicId, int page) {
-        throw new UnsupportedOperationException("Not supported yet.");
+      if(!checkLong("topic", "topicid", topicId)) {
+         return Result.failure("Topic id does not exist");
+      }
+      TopicView tv;
+      String s = "SELECT *, topic.title AS topict,forum.title AS forumt FROM Topic JOIN Forum on forum = id WHERE topicid = ?";
+      try(PreparedStatement p = c.prepareStatement(s)){
+          p.setLong(1, topicId);
+          ResultSet r = p.executeQuery();
+          Long forumId = r.getLong("forum");
+          String forumName = r.getString("forumt");
+          String topicTitle = r.getString("topict");
+          List<PostView> allPosts = getAllPostsFromTopic(forumId, topicId);
+          List<PostView> posts = allPosts;
+          if(page != 0){
+             List<PostView> filteredPosts = new ArrayList<PostView>();
+             int currentPostIndex = 10*(page-1);
+             int counter = 0;
+             PostView current;
+             while((counter < 10) && ((current = allPosts.get(currentPostIndex)) != null)){
+                filteredPosts.add(current);
+                currentPostIndex++;
+                counter++;
+             }
+             posts = filteredPosts;
+          }
+          tv = new TopicView(forumId, topicId, forumName, topicTitle, posts, page);
+
+       }
+       catch (SQLException e){
+            return Result.failure("Something bad happened: " + e);
+       }
+      return Result.success(tv);
     }
+
+    private List<PostView> getAllPostsFromTopic(long forumId, long topicId)
+    {
+      List<PostView> postList = new ArrayList<PostView>();
+      String s = "SELECT *, (SELECT COUNT(*) FROM Post JOIN Likepost ON postNumber = post_id WHERE topic_id = ?) AS likes FROM Post JOIN Person ON author = username WHERE topic = ? ORDER BY postNumber DESC";
+      try(PreparedStatement p = c.prepareStatement(s)){
+         p.setLong(1, topicId);
+         p.setLong(2, topicId);
+          ResultSet r = p.executeQuery();
+          while(r.next()){
+             int postNumber = r.getInt("postNumber");
+             String authorName = r.getString("name");
+             String authorUserName = r.getString("username");
+             String text = r.getString("contents");
+             int postedAt = r.getInt("postedAt");
+             int likes = r.getInt("likes");
+             PostView post = new PostView(forumId, topicId, postNumber, authorName, authorUserName, text, postedAt, likes);
+             postList.add(post);
+         }
+      }
+      catch(SQLException e){
+      }
+      return postList;
+   }
 
     @Override
     public Result likeTopic(String username, long topicId, boolean like) {
-        throw new UnsupportedOperationException("Not supported yet.");
+      if (username == null || username.equals("")) {
+        return Result.failure("bad username");
+      }
+      if(!checkString("person", "name", username)) {//table col val
+        return Result.failure("bad username");
+      }
+      String s = "INSERT INTO Liketopic (userID, Topic_ID) VALUES (?, ?)";
+      String t = "DELETE FROM Liketopic WHERE userID = ? AND topic_ID = ?";
+      String k = t;
+      if (like) {
+        k = s;
+      }
+      try(PreparedStatement p = c.prepareStatement(k)){
+        p.setString(1, username);
+        p.setLong(2, topicId);
+        p.execute();
+        c.commit();
+      }
+      catch (SQLException e) {
+        try{
+          c.rollback();
+        }
+        catch (SQLException f) {
+          return Result.fatal("Somehting really bad happened");
+        }
+        return Result.fatal("Something really bad happened: " + e);
+      }
+      return Result.success(null);
     }
 
     @Override
@@ -402,4 +494,33 @@ public class API implements APIProvider {
     public Result likePost(String username, long topicId, int post, boolean like) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+
+
+    public boolean checkString(String table, String column, String value) {
+      String s = "SELECT * FROM "+table+" WHERE ? = ?";
+      try(PreparedStatement p = c.prepareStatement(s)){
+        p.setString(1, column);
+        p.setString(2, value);
+        ResultSet r = p.executeQuery();
+        return true;
+      }
+      catch (SQLException e) {
+        return false;
+      }
+    }
+
+    public boolean checkLong (String table, String column, Long value) {
+      String s = "SELECT * FROM "+table+" WHERE ? = ?";
+      try(PreparedStatement p = c.prepareStatement(s)){
+      //    System.out.println(0);
+        p.setString(1, column);
+        p.setLong(2, value);
+        ResultSet r = p.executeQuery();
+      }
+      catch (SQLException e) {
+        return false;
+      }
+      return true;
+    }
+
    }
