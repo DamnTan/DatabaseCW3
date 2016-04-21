@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Calendar;
 import java.util.HashMap;
 import uk.ac.bris.cs.databases.api.APIProvider;
 import uk.ac.bris.cs.databases.api.AdvancedForumSummaryView;
@@ -28,6 +29,9 @@ import uk.ac.bris.cs.databases.api.SimplePostView;
 public class API implements APIProvider {
 
     private final Connection c;
+    private Calendar cal = Calendar.getInstance();
+
+    private long timer = cal.getTimeInMillis();
 
     public API(Connection c) {
         this.c = c;
@@ -99,7 +103,6 @@ public class API implements APIProvider {
           forum = new SimpleForumSummaryView(id, title);
           sfsvlist.add(forum);
         }
-          System.out.println(title);
       }
       catch (SQLException e) {
         return Result.fatal("Something bad happened" + e);
@@ -192,7 +195,7 @@ public class API implements APIProvider {
 
     @Override
     public Result<PostView> getLatestPost(long topicId) {
-        String s = "SELECT *, (SELECT COUNT(*) FROM Topic LEFT JOIN Likepost ON topicid = topic_id where topicid = ?) AS Likes FROM Topic LEFT JOIN Post ON topic.topicid = post.topic JOIN Forum ON forum.id = topic.forum JOIN Person ON person.id = post.author left join likepost on (userid=Person.id) and (topic_id=topicid) WHERE topic.topicid = ? ORDER BY postedAt DESC LIMIT 1";
+        String s = "SELECT *, (SELECT COUNT(*) FROM Topic LEFT JOIN Likepost ON topicid = topic_id where topicid = ?) AS Likes FROM Topic LEFT JOIN Post ON topic.topicid = post.topic JOIN Forum ON forum.id = topic.forum JOIN Person ON person.username = post.author left join likepost on (userid=Person.username) and (topic_id=topicid) WHERE topic.topicid = ? ORDER BY postedAt DESC LIMIT 1";
         PostView pv;
         try (PreparedStatement p = c.prepareStatement(s)) {
             p.setLong(1, topicId);
@@ -241,13 +244,42 @@ public class API implements APIProvider {
 
     @Override
     public Result createForum(String title) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
+      String s = "Insert into Forum (title) VALUES(?)";
+      try(PreparedStatement p = c.prepareStatement(s)){
+          p.setString(1, title);
+          p.execute();
+       }
+       catch (SQLException e){
+           return Result.failure("Something bad happened: " + e);
+       }
+      return Result.success(null);
+   }
 
     @Override
     public Result createPost(long topicId, String username, String text) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
+      Result<PostView> previous = getLatestPost(topicId);
+      PostView post;
+      try  {
+         post = previous.getValue();
+      }
+      catch (Exception e) {
+         return Result.failure("Topic does not exist");
+      }
+
+      String s = "Insert into Post (postNumber, topic, author, contents, postedAt) VALUES(?, ?, ?, ?, ?)";
+      try(PreparedStatement p = c.prepareStatement(s)){
+          int postNumber = post.getPostNumber() + 1;
+          p.setInt(1, postNumber);
+          p.setLong(2, topicId);
+          p.setString(3, username);
+          p.setString(4, text);
+          p.setLong(5, timer);
+          p.execute();
+       }
+       catch (SQLException e){
+           return Result.failure("Something bad happened: " + e);
+       }
+      return Result.success(null);    }
 
     @Override
     public Result addNewPerson(String name, String username, String studentId) {

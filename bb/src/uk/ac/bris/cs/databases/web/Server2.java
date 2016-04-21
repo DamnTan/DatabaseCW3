@@ -1,5 +1,5 @@
 /*
- * Mini implementation forum server and UI. 
+ * Mini implementation forum server and UI.
  */
 package uk.ac.bris.cs.databases.web;
 
@@ -25,7 +25,7 @@ public class Server2 extends RouterNanoHTTPD {
         super(8000);
         addMappings();
     }
-    
+
     @Override public void addMappings() {
         super.addMappings();
         addRoute("/person/:id", PersonHandler.class);
@@ -39,32 +39,32 @@ public class Server2 extends RouterNanoHTTPD {
         addRoute("/forum2/:id", AdvancedForumHandler.class);
         addRoute("/topic/:id", TopicHandler.class);
         addRoute("/topic0/:id", SimpleTopicHandler.class);
-        
+
         addRoute("/newforum", NewForumHandler.class);
         addRoute("/createforum", CreateForumHandler.class);
-        
+
         addRoute("/newtopic/:id", NewTopicHandler.class);
         addRoute("/createtopic", CreateTopicHandler.class);
-        
+
         addRoute("/newpost/:id", NewPostHandler.class);
         addRoute("/createpost", CreatePostHandler.class);
-        
+
         addRoute("/newperson", NewPersonHandler.class);
         addRoute("/createperson", CreatePersonHandler.class);
 
         addRoute("/login", LoginHandler.class);
         addRoute("/login/:id", LoginHandler.class);
-        
+
         addRoute("/styles.css", StyleHandler.class, "resources/styles.css");
         addRoute("/gridlex.css", StyleHandler.class, "resources/gridlex.css");
     }
-    
+
     public static void main(String[] args) throws Exception {
-        
+
         ApplicationContext c = ApplicationContext.getInstance();
 
         // database //
-        
+
         Connection conn;
         try {
             conn = DriverManager.getConnection(DATABASE);
@@ -76,16 +76,16 @@ public class Server2 extends RouterNanoHTTPD {
         }
 
         // templating //
-        
+
         Configuration cfg = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
         cfg.setDirectoryForTemplateLoading(new File("resources/templates"));
         cfg.setDefaultEncoding("UTF-8");
         c.setTemplateConfiguration(cfg);
-        
+
         // server //
 
         APIProvider api = c.getApi();
-        api.getLatestPost(0);
+        api.createPost(0, "cp15287", "whatever i don't know what i am doing");
 
         //Server2 server = new Server2();
         //ServerRunner.run(Server2.class);
