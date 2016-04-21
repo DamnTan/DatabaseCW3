@@ -22,7 +22,7 @@ CREATE TABLE Topic (
     topicID INTEGER PRIMARY KEY,
     title VARCHAR(100) NOT NULL,
     forum INTEGER NOT NULL,
-    creatorID VARCHAR(100),
+    creatorID INTEGER NOT NULL,
     page INTEGER,
     created INTEGER NOT NULL,
     CONSTRAINT creator_ID FOREIGN KEY (creatorID) REFERENCES Person(username),
@@ -32,7 +32,7 @@ CREATE TABLE Topic (
 CREATE TABLE Post (
     postNumber INTEGER NOT NULL,
     contents VARCHAR(200) NOT NULL,
-    author  VARCHAR(100),
+    author  VARCHAR(200),
     topic INTEGER NOT NULL,
     postedAt INTEGER NOT NULL,
     CONSTRAINT author_id FOREIGN KEY (author) REFERENCES Person(username),
@@ -41,7 +41,7 @@ CREATE TABLE Post (
 );
 
 CREATE TABLE Likepost (
-    userID VARCHAR(100),
+    userID INTEGER,
     Post_ID INTEGER,
     Topic_ID INTEGER,
     CONSTRAINT Liker_ID FOREIGN KEY (userID) REFERENCES Person(username),
@@ -52,7 +52,7 @@ CREATE TABLE Likepost (
 
 
 CREATE TABLE Liketopic (
-    userID VARCHAR(100),
+    userID INTEGER,
     Topic_ID INTEGER,
     CONSTRAINT Liker_ID FOREIGN KEY (userID) REFERENCES Person(username),
     CONSTRAINT Topic_ref FOREIGN KEY (topic_id) REFERENCES topic(topicID),

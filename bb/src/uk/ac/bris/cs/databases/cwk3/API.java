@@ -21,6 +21,8 @@ import uk.ac.bris.cs.databases.api.PersonView;
 import uk.ac.bris.cs.databases.api.SimpleForumSummaryView;
 import uk.ac.bris.cs.databases.api.SimpleTopicView;
 import uk.ac.bris.cs.databases.api.TopicView;
+import uk.ac.bris.cs.databases.api.TopicSummaryView;
+import uk.ac.bris.cs.databases.api.SimpleTopicSummaryView;
 import uk.ac.bris.cs.databases.api.SimplePostView;
 /**
  *
@@ -149,7 +151,6 @@ public class API implements APIProvider {
          String name = new String();
          String studentId = new String();
          while(r.next()){
-
             username = r.getString("username");
             name = r.getString("name");
             studentId = r.getString("stuId");
@@ -265,7 +266,6 @@ public class API implements APIProvider {
       catch (Exception e) {
          return Result.failure("Topic does not exist");
       }
-
       String s = "Insert into Post (postNumber, topic, author, contents, postedAt) VALUES(?, ?, ?, ?, ?)";
       try(PreparedStatement p = c.prepareStatement(s)){
           int postNumber = post.getPostNumber() + 1;
@@ -279,17 +279,89 @@ public class API implements APIProvider {
        catch (SQLException e){
            return Result.failure("Something bad happened: " + e);
        }
-      return Result.success(null);    }
+      return Result.success(null);
+   }
 
     @Override
     public Result addNewPerson(String name, String username, String studentId) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
+      String s = "Insert into Person (name, username, stuId) VALUES(?, ?, ?)";
+      try(PreparedStatement p = c.prepareStatement(s)){
+          p.setString(1, name);
+          p.setString(2, username);
+          p.setString(3, studentId);
+          p.execute();
+       }
+       catch (SQLException e){
+           return Result.failure("Something bad happened: " + e);
+       }
+      return Result.success(null);
+   }
 
     @Override
     public Result<ForumView> getForum(long id) {
-        throw new UnsupportedOperationException("Not supported yet.");
+      String s = "SELECT Forum.title as forumt, Topic.title as topict,* FROM Forum LEFT JOIN Topic on forum = Forum.id JOIN Person on creatorID = username where forum.id =?";
+      ForumView forum;
+      try(PreparedStatement p = c.prepareStatement(s)){
+          p.setLong(1, id);
+          ResultSet r = p.executeQuery();
+          String forumTitle;
+          boolean exists;
+          List<SimpleTopicSummaryView> topics = new ArrayList<SimpleTopicSummaryView>();
+          exists = r.next();
+          if(!exists) {
+             return Result.failure("No results found");
+          }
+          id = r.getLong("id");
+          String forumtitle = r.getString("forumt");
+          String creatorUsername = r.getString("username");
+          String creatorName = r.getString("name");
+          while(exists){
+             Long topicID = r.getLong("topicID");
+             String topictitle = r.getString("topict");
+             SimpleTopicSummaryView topic = new SimpleTopicSummaryView(topicID, id, topictitle);
+             topics.add(topic);
+             exists = r.next();
+          }
+          forum = new ForumView(id, forumtitle, topics);
+      }
+      catch (SQLException e){
+          return Result.failure("Something bad happened: " + e);
+      }
+      return Result.success(forum);
     }
+
+   // private TopicSummaryView getTopicSummaryView(long topicID, long forumID)
+   // {
+   //    String s = "SELECT (SELECT COUNT(*) FROM Topic JOIN Liketopic on topic_id=topicId group by topicid where topicId = ?) AS likes, * FROM Topic JOIN Person on creatorID = username WHERE topicid = ?";
+   //    TopicSummaryView topic;
+   //    try(PreparedStatement p = c.prepareStatement(s)){
+   //        p.setLong(1, topicID);
+   //        p.setLong(2, topicID);
+   //        ResultSet r = p.executeQuery();
+   //        boolean exists;
+   //        exists = r.next();
+   //        if(!exists) {
+   //           return null;
+   //        }
+   //         long topicID = r.getLong("topicID");
+   //         String topictitle = r.getString("title");
+   //         int likes = r.getInt("Likes");
+   //         String creatorName = r.getString("name");
+   //         String creatorUsername  = r.getString("username");
+   //         Result<Integer> counter = countPostsInTopic(topicID);
+   //         Result<PostView> resultlatestpost = getLatestPost(topicID);
+   //         PostView post = resultlatestpost.getValue();
+   //         int postCount = counter.getValue();
+   //         String lastPostName = post.getAuthorName();
+   //         int lastPostTime = post.getPostedAt();
+   //         int created = r.getInt("created");
+   //         topic = new TopicSummaryView(topicID, forumID, topictitle, postCount, created, lastPostTime, lastPostName, likes, creatorName, creatorUsername);
+   //      }
+   //      catch (SQLException e){
+   //         return Result.failure("Something bad happened: " + e);
+   //     }
+   //     return topic;
+   //  }
 
     @Override
     public Result<TopicView> getTopic(long topicId, int page) {
