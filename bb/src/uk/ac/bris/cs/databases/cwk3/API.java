@@ -332,7 +332,7 @@ public class API implements APIProvider {
       if (!checkLong("forum", "forum_id", id)) {
         return Result.failure("Forum does not exist");
       }
-      String s = "SELECT * FROM Forum LEFT JOIN Topic on parent_forum = forum_id JOIN Person on creator_un = username where forum_id =?";
+      String s = "SELECT * FROM Forum LEFT JOIN Topic on parent_forum = forum_id LEFT JOIN Person on creator_un = username where forum_id =?";
       ForumView forum;
       try(PreparedStatement p = c.prepareStatement(s)){
           p.setLong(1, id);
@@ -341,14 +341,12 @@ public class API implements APIProvider {
           boolean exists;
           List<SimpleTopicSummaryView> topics = new ArrayList<SimpleTopicSummaryView>();
           exists = r.next();
-          if(!exists) {
-             return Result.failure("No topics found");
-          }
           id = r.getLong("forum_id");
           String forumtitle = r.getString("forum_title");
           while(exists){
              Long topicID = r.getLong("topicID");
              String topictitle = r.getString("topic_title");
+             if (topictitle == null) break;
              SimpleTopicSummaryView topic = new SimpleTopicSummaryView(topicID, id, topictitle);
              topics.add(topic);
              exists = r.next();
@@ -490,39 +488,68 @@ public class API implements APIProvider {
       }
       return Result.success(null);    }
 
-    @Override
-    public Result createTopic(long forumId, String username, String title, String text) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
+      @Override
+      public Result createTopic(long forumId, String username, String title, String text) {
+         if(!checkLong("Forum", "forumid", forumId)) {//table col val
+          return Result.failure("forum not exist");
+         }
+         if(!checkString("Person", "username", username)) {//table col val
+          return Result.failure("forum not exist");
+         }
+         if (username == null || username.equals("") || title == null || title.equals("") || text == null || text.equals("")) {
+          return Result.failure("bad username");
+         }
+        String s = "Insert into topic (topic_title, parent_forum, creator_un, created) VALUES(?, ?, ?, ?)";
+
+        try(PreparedStatement p = c.prepareStatement(s)){
+            p.setString(1, title);
+            p.setLong(2, forumId);
+            p.setString(3, username);
+            p.setLong(4, timer);
+            p.execute();
+            c.commit();
+         }
+         catch (SQLException e){
+            try{
+              c.rollback();
+            }
+            catch (SQLException f) {
+              return Result.fatal("Something really bad happened");
+            }
+             return Result.failure("Something bad happened: " + e);
+         }
+         Result<Integer> topic_id = countTopic(forumId);
+         int id;
+         if (topic_id != null) {
+            id = topic_id.getValue() + 1;
+         }
+         else id =0;
+         createPost(id, username, text);
+         return Result.success(null);
+      }
 
     @Override
     public Result<List<AdvancedForumSummaryView>> getAdvancedForums() {
-      String s = "SELECT * FROM Forum LEFT JOIN Topic on parent_forum = forum_id";
+      String s = "  SELECT *, (SELECT topicid FROM Forum LEFT JOIN Topic on parent_forum = forum_id where f.forum_id= forum_id ORDER BY created DESC limit 1) as topicid from forum  f LEFT JOIN Topic on parent_forum = forum_id group by forum_id";
       List<AdvancedForumSummaryView> forums;
       try(PreparedStatement p = c.prepareStatement(s)){
           ResultSet r = p.executeQuery();
-          long forumID
-          String forumTitle;
+          int date = 0;
           forums = new ArrayList<AdvancedForumSummaryView>();
-          exists = r.next();
-          if(!exists) {
-             return Result.failure("No topics found");
+          AdvancedForumSummaryView forum;
+          while(r.next()){
+             long forumID = r.getLong("forum_id");
+             String forumtitle = r.getString("forum_title");
+             long topicID = r.getLong("topicID");
+             TopicSummaryView topic = getTopicSummaryView(forumID, topicID);
+             forum = new AdvancedForumSummaryView(forumID, forumtitle, topic);
+             forums.add(forum);
           }
-          id = r.getLong("forum_id");
-          String forumtitle = r.getString("forum_title");
-          while(exists){
-             Long topicID = r.getLong("topicID");
-             String topictitle = r.getString("topic_title");
-             SimpleTopicSummaryView topic = new SimpleTopicSummaryView(topicID, id, topictitle);
-             topics.add(topic);
-             exists = r.next();
-          }
-          forum = new ForumView(id, forumtitle, topics);
       }
       catch (SQLException e){
           return Result.failure("Something bad happened: " + e);
       }
-      return Result.success(forum);
+      return Result.success(forums);
     }
 
     @Override
@@ -581,7 +608,7 @@ public class API implements APIProvider {
         if(!exists) {
            return null;
         }
-         long topicID = r.getLong("topicID");
+         topicID = r.getLong("topicID");
          String topictitle = r.getString("topic_title");
          int likes = r.getInt("Likes");
          String creatorName = r.getString("name");
@@ -596,9 +623,32 @@ public class API implements APIProvider {
          topic = new TopicSummaryView(topicID, forumID, topictitle, postCount, created, lastPostTime, lastPostName, likes, creatorName, creatorUsername);
       }
       catch (SQLException e){
-         return Result.failure("Something bad happened: " + e);
+         return null;
      }
      return topic;
+  }
+
+  public Result<Integer> countTopic(long forumId) {
+       if(!checkLong("Forum", "forumID", forumId)) {
+          return Result.failure("Topic does not exist");
+       }
+      TopicView topic;
+      String s = "SELECT count(*) as counter FROM Topic JOIN Forum on forum_id = parent_forum WHERE forum_id = ?";
+      int count = 0;
+      try (PreparedStatement p = c.prepareStatement(s)) {
+          p.setLong(1, forumId);
+          ResultSet r = p.executeQuery();
+          boolean exists;
+          exists = r.next();
+          if (!exists) return Result.success(count);
+          if (r.next()) {
+             throw new RuntimeException("There shouldn't be another row!");
+          }
+      }
+      catch (SQLException e) {
+          return Result.failure("Something bad happened: " + e);
+      }
+      return Result.success(count);
   }
 
    }
