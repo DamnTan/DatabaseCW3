@@ -85,8 +85,9 @@ public class Server2 extends RouterNanoHTTPD {
         // server //
 
         APIProvider api = c.getApi();
-        api.createPost(0, "cp15287", "whatever");
-
+      //   api.getTopic(11,0);
+      //   api.createTopic(1, "cp15287", "trying to make it work", "aigfdksuydfsdyugfksdyugfksdyu");
+api.getAdvancedForums();
         //Server2 server = new Server2();
         //ServerRunner.run(Server2.class);
     }
