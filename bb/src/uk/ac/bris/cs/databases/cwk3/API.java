@@ -49,9 +49,6 @@ public class API implements APIProvider {
         try(PreparedStatement p = c.prepareStatement("SELECT username, name FROM Person")){
             ResultSet r = p.executeQuery();
             boolean exists = r.next();
-            if(!exists){
-               return Result.failure("Table is empty");
-            }
             while(exists){
                String username = new String();
                String name = new String();
@@ -90,7 +87,6 @@ public class API implements APIProvider {
           }
           pv = new PersonView(name, username, studentId);
           }
-
       catch (SQLException e){
           return Result.fatal("Something bad happened: " + e);
       }
@@ -264,6 +260,9 @@ public class API implements APIProvider {
 
     @Override
     public Result createForum(String title) {
+      if (title == null || title.equals("")) {
+       return Result.failure("Please enter a title for the forum.");
+      }
       String s = "Insert into Forum (forum_title) VALUES(?)";
       try(PreparedStatement p = c.prepareStatement(s)){
           p.setString(1, title);
@@ -568,7 +567,7 @@ public class API implements APIProvider {
                   +"(SELECT count(1) FROM liketopic WHERE liketopic_topic_id = topicid) AS likes "
                   +"FROM forum  f LEFT JOIN Topic ON parent_forum = forum_id "
                   +"LEFT JOIN Post ON parent_topic=topicid left JOIN person c ON c.username=creator_un "
-                  +"LEFT JOIN Person a on a.username=author  GROUP BY forum_id";
+                  +"LEFT JOIN Person a on a.username=author GROUP BY forum_id";
       List<AdvancedForumSummaryView> forums;
       try(PreparedStatement p = c.prepareStatement(s)){
           ResultSet r = p.executeQuery();
@@ -606,11 +605,20 @@ public class API implements APIProvider {
         if (username == null || username.equals("")) {
             return Result.failure("bad username");
         }
-        if(!checkString("person", "name", username)) {//table col val
+        if (!checkString("person", "name", username)) {//table col val
             return Result.failure("bad username");
         }
-        AdvancedPersonView apv;
-        String s = "SELECT *, (SELECT count(1) from liketopic join topic ON topicid = liketopic_topic_id WHERE liketopic_user = ?) as topiclikes, (select count(1) from likepost join post on likepost.likepost_post_id = post.postnumber and likepost.likepost_topic_id = post.parent_topic join person on post.author = person.username where person.username = ?) as postlikes FROM Person left join favouritetopic on FavouriteTopic_user = username left  join topic on FavouriteTopic_topic_id = topicid where username = ?";
+        AdvancedPersonView apv = null;
+        String s =  "SELECT *, a.name AS authorname, c.username AS creatorun, c.name AS creatorname, " +
+        "(SELECT count(1) from liketopic join topic ON topicid = liketopic_topic_id WHERE liketopic_user = ?) as topiclikes, " +
+        "(select count(1) from likepost join post on (likepost.likepost_post_id = post.postnumber and likepost.likepost_topic_id = post.parent_topic) " +
+        "JOIN person on post.author = person.username where person.username = ?) as postlikes, (SELECT topicid FROM Forum LEFT JOIN Topic ON parent_forum = forum_id " +
+        "LEFT JOIN Post on parent_topic=topicid WHERE topicid=FavouriteTopic_topic_id ORDER BY postedAt DESC limit 1) AS postid2, " +
+        "(SELECT count(1) FROM post WHERE parent_topic = FavouriteTopic_topic_id) AS numposts, " +
+        "(SELECT count(1) FROM liketopic WHERE liketopic_topic_id = FavouriteTopic_topic_id) AS likes " +
+        "FROM Person u LEFT JOIN favouritetopic on FavouriteTopic_user = u.username LEFT JOIN topic on FavouriteTopic_topic_id = topicid " +
+        "LEFT JOIN Person c on creator_un= c.username LEFT JOIN Post ON (parent_topic=postid2 and postNumber=postid2) " +
+        "LEFT JOIN Person a on a.username=author where u.username = ?";
         try(PreparedStatement p = c.prepareStatement(s)){
             p.setString(1, username);
             p.setString(2, username);
@@ -618,19 +626,39 @@ public class API implements APIProvider {
             p.execute();
             c.commit();
             ResultSet r = p.executeQuery();
-            List<TopicSummaryView> topics = new ArrayList<TopicSummaryView>();
+            boolean exists = r.next();
+            List<TopicSummaryView> favourites = new ArrayList<TopicSummaryView>();
             String name = r.getString("name");
             username = r.getString("username");
-            String studentId = r.getString("studentId");
+            String studentId = r.getString("stuId");
+            if(studentId == null){
+                studentId = "";
+            }
             int topicLikes = r.getInt("topiclikes");
             int postLikes = r.getInt("postlikes");
-            while(r.next()) {
-                String favouriteTopics = r.getString("topic_title");
-
+            TopicSummaryView topic;
+            while(exists) {
+                long forumID = r.getLong("parent_forum");
+                String topictitle = r.getString("topic_title");
+                if(topictitle == null) break;
+                long topicID = r.getLong("topicID");
+                int likes = r.getInt("likes");
+                String creatorName = r.getString("creatorname");
+                String creatorUsername = r.getString("creatorun");
+                int postCount = r.getInt("numposts");
+                String lastPostName = r.getString("authorname");
+                int lastPostTime = r.getInt("postedAt");
+                int created = r.getInt("created");
+                topic = new TopicSummaryView(topicID, forumID, topictitle, postCount, created, lastPostTime, lastPostName, likes, creatorName, creatorUsername);
+                favourites.add(topic);
+                exists = r.next();
             }
+            System.out.println(name + " " + username + " " + studentId + " " + topicLikes + " " + postLikes + " " + favourites);
+            apv = new AdvancedPersonView(name, username, studentId, topicLikes, postLikes, favourites);
         } catch (SQLException e) {
             e.printStackTrace();
         }
+        return Result.success(apv);
     }
 
     @Override
@@ -650,11 +678,6 @@ public class API implements APIProvider {
        +"JOIN Post ON parent_topic=topicid "
        +"JOIN person c ON c.username=creator_un JOIN Person a on a.username=author "
        +"WHERE (topicid=topicid2 AND postNumber = postid2 AND forum_id = ?) GROUP BY forum_id";
-        String k = "SELECT forum_id, forum_title, topicid, topic_title, name, username, created, " +
-                   "(SELECT count(1) FROM post WHERE parent_topic = topicid) AS numposts, " +
-                   "(SELECT count(1) FROM liketopic WHERE liketopic_topic_id = topicid) AS likes " +
-                   "FROM forum LEFT JOIN topic ON parent_forum = forum_id "+
-                   "JOIN person ON username = creator_un WHERE forum_id = ?";
         AdvancedForumView forum;
         try(PreparedStatement p = c.prepareStatement(s)){
             p.setLong(1, id);
@@ -667,7 +690,6 @@ public class API implements APIProvider {
             while(exists){
                 Long topicID = r.getLong("topicID");
                 String topicTitle = r.getString("topic_title");
-               //  if (topicTitle == null) break;
                 int likes = r.getInt("likes");
                 String creatorName = r.getString("creatorname");
                 String creatorUsername = r.getString("creatorun");
@@ -717,45 +739,6 @@ public class API implements APIProvider {
       }
       return true;
     }
-
-
-    private TopicSummaryView getTopicSummaryView(long topicID, long forumID){
-    String s = "SELECT *, (SELECT COUNT(*) FROM Topic JOIN Liketopic ON liketopic_topic_ID = topicId GROUP BY topicid ) AS likes FROM Topic JOIN Person ON creator_un = username WHERE topicid = ?";
-    TopicSummaryView topic;
-    if(!checkLong("Forum", "forumID", forumID)) {
-      return null;
-    }
-    if(!checkLong("Topic", "topicid", topicID)) {
-      return null;
-    }
-    try(PreparedStatement p = c.prepareStatement(s)){
-        p.setLong(1, topicID);
-        ResultSet r = p.executeQuery();
-        boolean exists;
-        exists = r.next();
-        if(!exists) {
-           return null;
-        }
-         topicID = r.getLong("topicID");
-         String topictitle = r.getString("topic_title");
-         int likes = r.getInt("Likes");
-         String creatorName = r.getString("name");
-         String creatorUsername  = r.getString("username");
-         Result<Integer> counter = countPostsInTopic(topicID);
-         Result<PostView> resultlatestpost = getLatestPost(topicID);
-         PostView post = resultlatestpost.getValue();
-         int postCount = counter.getValue();
-         String lastPostName = post.getAuthorName();
-         int lastPostTime = post.getPostedAt();
-         int created = r.getInt("created");
-         System.out.println(topicID+ " | " + forumID+ " | " + topictitle+ " | " + postCount+ " | " + created+ " | " + lastPostTime+ " | " + lastPostName+ " | " + likes+ " | " + creatorName+ " | " + creatorUsername);
-         topic = new TopicSummaryView(topicID, forumID, topictitle, postCount, created, lastPostTime, lastPostName, likes, creatorName, creatorUsername);
-      }
-      catch (SQLException e){
-         return null;
-     }
-     return topic;
-  }
 
   private Result<Integer> countTopic() {
       TopicView topic;
